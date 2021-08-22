@@ -37,6 +37,45 @@ namespace TSVDB
             Lines = new BlockingCollection<string[]>();
 
         }
+        
+        public async Task<DTOOut> Split(string fileName, int batchSize)
+        {
+            DTO = new DTOOut();
+            string[] lines = ".".Split('.');
+            int start = 0;
+            string Header = "";
+            string fName = "";
+
+            int batchCount = 1;
+            while(lines.Length > 0 )
+            {
+
+                lines = File.ReadAllLines(fileName).Skip(start).Take(batchSize).ToArray();
+                start += lines.Length;
+                if ( lines.Length > 0 )
+                {
+                    if (Header.IsEmpty())
+                        Header = lines[0];
+
+                    fName = fileName.GetNewName($".Split{batchCount}");
+                    try
+                    {
+                        await File.WriteAllTextAsync(fName, $"{Header}\r\n");
+                        await File.WriteAllLinesAsync(fName, lines);
+                        batchCount++;
+                    }
+                    catch(Exception ex)
+                    {
+                        DTO.Result = -1;
+                        DTO.Mesage = $"Error writing file {fname}";
+                        DTO.Ex = ex;
+                    }
+                }
+            }
+
+            return DTO;
+        }
+
 
         public void SetHeader(string line, char separator = '\t')
         {
