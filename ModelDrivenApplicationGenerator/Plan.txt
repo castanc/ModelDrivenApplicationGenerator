@@ -1,0 +1,77 @@
+﻿entities:
+
+formName
+formType: filter,list,listFilter,create,editFull,editSingle,delete,view
+detailFormas: form1,form2...
+
+-field
+formName
+groupname
+ id
+ order
+ name
+ type           /text,number,longtext,date,time,datetime,boolean,singleSelect,MultiSelect,hidden
+ nullable
+ value
+ displaytype
+ minlength
+ maxlenght
+ required
+ selectOptions: list, table,id,imgfield,fld1,fld2,fldn
+ selectOptionsFilterFields
+ selectOptionsFiltervalues
+ hideChar
+ validations: val1,val2...
+
+
+ hide/protect: group1,group2,groupn
+
+Hide
+groupName
+value
+divIds: to hide
+
+protect
+fieldName
+value
+divIds: to protect
+
+show
+fieldName
+value
+divIds: to protect
+
+
+
+
+
+
+
+ validations
+  validationid
+ validationName
+ RegExpression
+EqGtLt
+toField
+
+fieldValidations
+idField
+idValidation
+
+security:
+Roles
+RoleId
+RoleName
+permisions: view,read,write,delete
+
+formPermissions:
+formId
+roles: role1,role2...
+
+FieldPermisions:
+fieldValidations
+Roles: role1,role2,role3
+
+
+
+ s
