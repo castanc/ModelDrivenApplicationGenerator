@@ -246,7 +246,7 @@ namespace TSVDB
         {
             foreach (var fileName in files)
             {
-                TSVFile tsv = new TSVFile(fileName);
+                TSVFile tsv = new(fileName);
                 await tsv.Load();
                 DTO = await tsv.SelectColumns(fileName, colNames, colSeparator);
                 if (DTO.Result < 0)
@@ -316,8 +316,8 @@ namespace TSVDB
         public async Task<DTOOut> SelectColumns(string fileName, string colNames,char colSeparator = '\t')
         {
             var cols = colNames.Split(colSeparator);
-            StringBuilder sbHeader = new StringBuilder();
-            Dictionary<string, int> newColIndex = new Dictionary<string, int>();
+            StringBuilder sbHeader = new();
+            Dictionary<string, int> newColIndex = new();
 
             if ( !colNames.ToLower().Contains("filename"))
                 sbHeader.Append($"FileName{ColSeparator}");
@@ -332,7 +332,7 @@ namespace TSVDB
 
             Parallel.ForEach(Lines, line =>
             {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
                 foreach (var col in cols)
                     if ( ColIndex.ContainsKey(col))
                         sb.Append($"{line[ColIndex[col]]}{ColSeparator}");
