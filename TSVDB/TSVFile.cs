@@ -23,14 +23,12 @@ namespace TSVDB
 
         Encoding Enc { set; get; }
 
-        public TSVFile(string fileName, char _colSeparator = '\t', Encoding _enc = null )
+        public TSVFile(string fileName, char _colSeparator = '\t')
         {
             DTO = new DTOOut();
             FileName = fileName;
 
-            if (_enc == null)
-                _enc = Encoding.UTF8;
-            Enc = _enc;
+            Enc = Encoding.UTF8;
 
             ColSeparator = _colSeparator;
             ColIndex = new Dictionary<string, int>();
@@ -49,27 +47,27 @@ namespace TSVDB
             int batchCount = 1;
             while(lines.Length > 0 )
             {
-
-                lines = File.ReadAllLines(fileName).Skip(start).Take(batchSize).ToArray();
-                start += lines.Length;
-                if ( lines.Length > 0 )
-                {
-                    if (Header.IsEmpty())
-                        Header = lines[0];
-
-                    fName = fileName.GetNewName($".Split{batchCount}");
-                    try
+                try
+                { 
+                    lines = File.ReadAllLines(fileName).Skip(start).Take(batchSize).ToArray();
+                    start += lines.Length;
+                    if (lines.Length > 0)
                     {
+                        if (Header.IsEmpty())
+                            Header = lines[0];
+
+                        fName = fileName.GetNewName($".Split_{batchCount}");
                         await File.WriteAllTextAsync(fName, $"{Header}\r\n");
                         await File.WriteAllLinesAsync(fName, lines);
                         batchCount++;
                     }
-                    catch(Exception ex)
-                    {
-                        DTO.Result = -1;
-                        DTO.Mesage = $"Error writing file {fname}";
-                        DTO.Ex = ex;
-                    }
+                }
+                catch(Exception ex)
+                {
+                    DTO.Result = -1;
+                    DTO.Message = "Error reading file";
+                    DTO.Ex = ex;
+                    break;
                 }
             }
 
@@ -109,7 +107,7 @@ namespace TSVDB
                 catch(Exception ex)
                 {
                     DTO.Result = -1;
-                    DTO.Mesage = "Error reading file";
+                    DTO.Message = "Error reading file";
                     DTO.Ex = ex;
                     return DTO;
                 }
@@ -133,9 +131,24 @@ namespace TSVDB
             return DTO;
         }
 
+        public async Task<DTOOut> AddColumnIds(string[] files, string colNames, string additionalCols = "", 
+            char colSeparator = '\t')
+        {
+            foreach(string fileName in files)
+            {
+                TSVFile tsv = new TSVFile(fileName);
+                await tsv.Load();
+                DTO = await tsv.AddColumnIds(colNames, additionalCols, colSeparator);
+                if (DTO.Result < 0)
+                    break;
+            }
+            return DTO;
+        }
+
+
         public async Task<DTOOut> AddColumnIds( string colNames, string additionalCols = "", char colSeparator = '\t')
         {
-            colNames = colNames.Trim().Replace($"{ColSeparator}", $"Id{ColSeparator}");
+            colNames = colNames.Trim().Replace($"{ColSeparator}", $"Id{colSeparator}");
             colNames += "Id";
             if (additionalCols.IsNotEmpty())
                 colNames += $"{colSeparator}{additionalCols}";
@@ -153,6 +166,18 @@ namespace TSVDB
             return DTO;
         }
 
+        public async Task<DTOOut> AddColumns(string[] files, string additionalCols, char colSeparator = '\t')
+        {
+            foreach (var fileName in files)
+            {
+                TSVFile tsv = new TSVFile(fileName);
+                DTO = await tsv.Load();
+                DTO = await tsv.AddColumns(additionalCols, colSeparator);
+                if (DTO.Result < 0)
+                    break;
+            }
+            return DTO;
+        }
 
         public async Task<DTOOut> AddColumns(string additionalCols, char colSeparator = '\t')
         {
@@ -160,10 +185,10 @@ namespace TSVDB
 
             Parallel.ForEach(Lines, line =>
             {
-                string l2 = string.Join(colSeparator, line);
+                string l2 = string.Join(ColSeparator, line);
                 string addCols = "".PadLeft(ColIndex.Count - line.Length, '\t');
                 if (line.Length < ColIndex.Count)
-                    line = $"{l2}{colSeparator}{addCols}".Split(colSeparator);
+                    line = $"{l2}{ColSeparator}{addCols}".Split(ColSeparator);
             }
             );
             await Save();
@@ -186,14 +211,14 @@ namespace TSVDB
             BlockingCollection<string> newLines = new BlockingCollection<string>();
 
             foreach (var kvp in ColIndex)
-                sbHeader.Append($"{kvp.Key}{colSeparator}");
+                sbHeader.Append($"{kvp.Key}{ColSeparator}");
             sbHeader.AppendLine();
 
             Parallel.ForEach(Lines, line =>
             {
                 StringBuilder sb = new StringBuilder();
                 foreach (var kvp in ColIndex)
-                    sb.Append($"{line[kvp.Value]}{colSeparator}");
+                    sb.Append($"{line[kvp.Value]}{ColSeparator}");
 
                 newLines.TryAdd(sb.ToString());
             }
@@ -208,7 +233,7 @@ namespace TSVDB
             catch(Exception ex)
             {
                 DTO.Result = -1;
-                DTO.Mesage = "Error saving file.";
+                DTO.Message = "Error saving file.";
                 DTO.Ex = ex;
             }
 
@@ -217,20 +242,90 @@ namespace TSVDB
         }
 
 
-        //todo: batched version without parallel for big big files
-        public async Task<DTOOut> SelectColumns(string fileName, string colNames,
-            char colSeparator = '\t')
+        public async Task<DTOOut> SelectColumns(string[] files, string colNames, char colSeparator = '\t')
+        {
+            foreach (var fileName in files)
+            {
+                TSVFile tsv = new TSVFile(fileName);
+                await tsv.Load();
+                DTO = await tsv.SelectColumns(fileName, colNames, colSeparator);
+                if (DTO.Result < 0)
+                    break;
+            }
+            return DTO;
+        }
+
+        public async Task<DTOOut> SetValues(string[] files, string colNames, string values, char colSeparator = '\t')
+        {
+            foreach (var fileName in files)
+            {
+                TSVFile tsv = new TSVFile(fileName);
+                await tsv.Load();
+                DTO = await tsv.SetValues(FileName, colNames, values, colSeparator);
+                if (DTO.Result < 0)
+                    break;
+            }
+            return DTO;
+        }
+
+
+        public async Task<DTOOut> SetValues(string fileName, string colNames, string values, char colSeparator = '\t')
+        {
+            DTO = new DTOOut();
+            colNames = colNames.Trim();
+            values = values.Trim();
+            string[] vals = values.Split(colSeparator);
+            string[] cols = colNames.Split(colSeparator);
+
+            if ( vals.Length != cols.Length)
+            {
+                DTO.Result = -1;
+                DTO.Message = "Columns and values array are different sizes";
+                return DTO;
+            }
+
+            Parallel.ForEach(Lines, line =>
+            {
+                for (int i = 0; i < cols.Length; i++)
+                {
+                    cols[i] = cols[i].Trim();
+                    if (ColIndex.ContainsKey(cols[i]))
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        string[] v2 = vals[i].Split('$');
+                        if (v2.Length > 0)
+                        {
+                            sb.Append(v2[0]);
+                            for (int j = 1; j < v2.Length; j++)
+                            {
+                                v2[j] = v2[j].Trim();
+                                if (ColIndex.ContainsKey(v2[j]))
+                                    sb.Append(v2[j]);
+                            }
+                        }
+                        line[ColIndex[cols[i]]] = sb.ToString();
+                    }
+                }
+            }
+            );
+            await Save();
+
+            return DTO;
+        }
+
+        public async Task<DTOOut> SelectColumns(string fileName, string colNames,char colSeparator = '\t')
         {
             var cols = colNames.Split(colSeparator);
             StringBuilder sbHeader = new StringBuilder();
             Dictionary<string, int> newColIndex = new Dictionary<string, int>();
+
+            if ( !colNames.ToLower().Contains("filename"))
+                sbHeader.Append($"FileName{ColSeparator}");
+
             for (int i = 0; i < cols.Length; i++)
             {
                 cols[i] = cols[i].Trim();
-                if (ColIndex.ContainsKey(cols[i]))
-                {
-                    sbHeader.Append($"{cols[i]}{colSeparator}");
-                }
+                sbHeader.Append($"{cols[i]}{ColSeparator}");
             }
             BlockingCollection<string> newLines = new BlockingCollection<string>();
             sbHeader.AppendLine();
@@ -240,8 +335,11 @@ namespace TSVDB
                 StringBuilder sb = new StringBuilder();
                 foreach (var col in cols)
                     if ( ColIndex.ContainsKey(col))
-                        sb.Append($"{line[ColIndex[col]]}{colSeparator}");
-                newLines.TryAdd(sb.ToString());
+                        sb.Append($"{line[ColIndex[col]]}{ColSeparator}");
+                    else
+                        sb.Append($"{ColSeparator}");
+
+                newLines.TryAdd($"{Path.GetFileName(fileName)}{ColSeparator}{sb}");
             }
             );
 
@@ -254,7 +352,7 @@ namespace TSVDB
             catch (Exception ex)
             {
                 DTO.Result = -1;
-                DTO.Mesage = "Error saving file.";
+                DTO.Message = "Error saving file.";
                 DTO.Ex = ex;
             }
 
@@ -287,78 +385,13 @@ namespace TSVDB
             catch(Exception ex)
             {
                 DTO.Result = -1;
-                DTO.Mesage = "Error saving file";
+                DTO.Message = "Error saving file";
                 DTO.Ex = ex;
             }
 
 
             return DTO;
         }
-
-
-        //todo: file split
-
-        public async Task<DTOOut> Split(string fileName, int batchSize)
-        {
-            DTO = new DTOOut();
-            string[] lines = ".".Split('.');
-            int start = 0;
-
-            int batchCount = 1;
-            while(lines.Length > 0 )
-            {
-                lines = File.ReadAllLines(fileName).Skip(start).Take(batchSize).ToArray();
-                start += lines.Length;
-                if ( lines.Length > 0 )
-                {
-
-                    batchCount++;
-                }
-                     
-            }
-
-
-
-
-            return DTO;
-        }
-
-        //todo: not necesary, batched is required onky for splitting
-        public async Task<DTOOut> SaveBatched(string fileName = "", int batchSize = 50000 )
-        {
-            DTO = new DTOOut();
-            if (fileName.IsEmpty())
-                fileName = FileName;
-
-            try
-            {
-                BlockingCollection<string> lines = new BlockingCollection<string>();
-                await File.WriteAllTextAsync(fileName, $"{HeaderLine}\r\n");
-
-                foreach(var line in Lines)
-                {
-                    lines.TryAdd(string.Join(ColSeparator, line));
-                    if ( lines.Count > batchSize )
-                    {
-                        File.AppendAllLines(fileName, lines);
-                        lines = new BlockingCollection<string>();
-                    }
-                }
-
-                if (lines.Count > 0)
-                    await File.AppendAllLinesAsync(fileName, lines);
-            }
-            catch (Exception ex)
-            {
-                DTO.Result = -1;
-                DTO.Mesage = "Error saving file";
-                DTO.Ex = ex;
-            }
-
-
-            return DTO;
-        }
-
 
     }
 }

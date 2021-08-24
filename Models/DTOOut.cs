@@ -6,7 +6,7 @@ namespace Models
     public class DTOOut
     {
         public int Result { get; set; }
-        public string Mesage { get; set; }
+        public string Message { get; set; }
 
         public Exception Ex { get; set; }
 
@@ -15,7 +15,7 @@ namespace Models
         public DTOOut()
         {
             Result = 0;
-            Mesage = "";
+            Message = "";
         }
 
     }
