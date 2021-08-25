@@ -115,7 +115,9 @@ namespace TSVDB
                 if (lines.Length > 0)
                 {
                     SetHeader(lines[0], colSeparator);
-                    lines = lines.Skip(1).ToArray();
+                    lines = lines.Where(x => x.IsNotEmpty()).ToArray();
+                    string emptyline = "".PadLeft(ColIndex.Count, colSeparator);
+                    lines = lines.Where(x => x.IsNotEmpty() && x != emptyline).ToArray().Skip(1).ToArray();
 
                     Parallel.ForEach(lines, line =>
                     {
@@ -264,6 +266,40 @@ namespace TSVDB
                 DTO = await tsv.SetValues(FileName, colNames, values, colSeparator);
                 if (DTO.Result < 0)
                     break;
+            }
+            return DTO;
+        }
+
+        public async Task<DTOOut> SetFileNameRecordId(string[] files, int startId)
+        { 
+            foreach(string fileName in files)
+            {
+                TSVFile tsv = new TSVFile(fileName);
+                await tsv.Load();
+
+                string newHeader = tsv.HeaderLine;
+                if (!newHeader.ToLower().Contains("filename"))
+                    newHeader = $"{newHeader}{tsv.ColSeparator}FileName";
+
+                if (!newHeader.ToLower().Contains("recordid"))
+                    newHeader = $"{newHeader}{tsv.ColSeparator}RecordId";
+
+                tsv.HeaderLine = newHeader;
+
+                BlockingCollection<string> counter = new BlockingCollection<string>();
+                Parallel.ForEach(tsv.Lines, line =>
+                {
+                    if ( line.Length < tsv.ColIndex.Count)
+                    {
+                        string nf = "".PadLeft(tsv.ColIndex.Count - line.Length, tsv.ColSeparator);
+                        line = $"{string.Join(tsv.ColSeparator, line}{tsv.ColSeparator}{nf}".Split(tsv.ColSeparator);
+                    }
+                    line[tsv.ColIndex["FileName"]] = Path.GetFileName(tsv.FileName);
+                    counter.TryAdd("");
+                    line[tsv.ColIndex["RecordId"]] = (counter.Count + startId).ToString();
+                }
+                );
+                await tsv.Save();
             }
             return DTO;
         }

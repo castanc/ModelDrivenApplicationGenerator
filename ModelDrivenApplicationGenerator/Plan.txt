@@ -1,8 +1,16 @@
 ﻿entities:
 
+project
+name
+root folder url
+
+
+
+
 formName
-formType: filter,list,listFilter,create,editFull,editSingle,delete,view
-detailFormas: form1,form2...
+formType: filter,list,listFilter(qbe row),listEdit,create,editFull,editSingle,delete,view
+detailForms: form1,form2...
+linkedForms:
 
 -field
 formName
